@@ -50,6 +50,7 @@
                 const notification = document.createElement('div');
                 notification.className = `notification ${data.type}`;
                 notification.innerHTML = data.text;
+                notificationContainer.style.display = 'block';
 
                 notificationContainer.innerHTML = ''; // Pulisce la precedente notifica
                 notificationContainer.appendChild(notification);
@@ -68,6 +69,9 @@
                 console.error('Errore nella richiesta:', error);
             })
             .finally(() => {
+                //setTimeout(() => {
+                //  notificationContainer.style.display = 'none';  // Nascondi la notifica
+                //}, 2000);
                 console.log("Richiesta elaborata");
             });
         });
