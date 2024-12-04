@@ -1,6 +1,5 @@
 const express = require('express');
 const multer = require('multer');
-//const xlsx = require('xlsx');
 const path = require('path');
 const fs = require('fs');
 const Excel = require('exceljs');
@@ -14,14 +13,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        cb(null, 'uploads/'); // Cartella di destinazione
-    },
-    filename: function (req, file, cb) {
-        cb(null, Date.now() + path.extname(file.originalname)); // Nome univoco
-    }
-});
+// Configurazione per memorizzare i file in memoria
+const storage = multer.memoryStorage();
 const upload = multer({ storage: storage });
 
 app.get('/', (req, res) => {
@@ -31,15 +24,21 @@ app.get('/', (req, res) => {
 app.post('/upload', upload.single('file'), async (req, res) => {
     try {
         const selectedService = req.body.service;
+
+        // Controlla se un file è stato caricato
+        if (!req.file) {
+            return res.status(400).json({
+                type: 'error',
+                text: 'Nessun file caricato.'
+            });
+        }
+        console.log(`File caricato in memoria: ${req.file.originalname}`)
+        const workbook2 = new Excel.Workbook();
+        await workbook2.xlsx.load(req.file.buffer);
+        const worksheet2 = workbook2.getWorksheet(1);
+
         await workbook.xlsx.readFile('Template2.xlsx');
         const worksheet = workbook.getWorksheet(1);
-
-        // Carica il file caricato
-        console.log('File caricato:', req.file);
-        const filePath = req.file.path;
-        const workbook2 = new Excel.Workbook();
-        await workbook2.xlsx.readFile(filePath);
-        const worksheet2 = workbook2.getWorksheet(1);
 
         // Mappare i dati e aggiungerli
         worksheet2.eachRow({ includeEmpty: false }, (row, rowNumber) => { //includeEmpty ignora le righe completamente vuote
@@ -60,8 +59,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
             }
         });
 
-        // Scrivi le modifiche 
-        console.log(`ho finito di leggere: ${req.file.path}`)
+        // Scrivi le modifiche
         await workbook.xlsx.writeFile('Template2.xlsx');
         console.log('File test.xlsx aggiornato con successo!');
 
