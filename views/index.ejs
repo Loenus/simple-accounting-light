@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Importa File</title>
+    <link rel="stylesheet" href="/css/index.css">
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">Importa File</h1>
+
+        <div id="notification-container"></div>
+
+        <form id="importForm" action="/upload" method="POST" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="service">Seleziona il servizio</label>
+                <select name="service" id="service" required>
+                    <option value="intesa">Intesa</option>
+                    <option value="paypal">PayPal</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="file">Carica il file</label>
+                <input type="file" name="file" id="file" required>
+            </div>
+            <button type="submit">Importa</button>
+        </form>
+    </div>
+
+    <script>
+        const timeout = 5000;
+
+        // Intercetta l'invio del form
+        document.getElementById('importForm').addEventListener('submit', function (e) {
+            e.preventDefault(); // Impedisce il comportamento di submit tradizionale
+
+            // Crea un FormData per inviare i dati del form
+            const formData = new FormData(this);
+            
+            // Esegui una richiesta AJAX
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json()) // Risposta del server come JSON
+            .then(data => {
+                // Mostra la notifica (successo o errore)
+                const notificationContainer = document.getElementById('notification-container');
+                const notification = document.createElement('div');
+                notification.className = `notification ${data.type}`;
+                notification.innerHTML = data.text;
+
+                notificationContainer.innerHTML = ''; // Pulisce la precedente notifica
+                notificationContainer.appendChild(notification);
+
+                // Nascondi gradualmente la notifica dopo 10 secondi
+                setTimeout(() => {
+                    notification.style.opacity = '0'; // Inizia il fade-out
+                }, timeout); // Dopo 10 secondi
+
+                // Dopo il fade-out, nascondi completamente la notifica
+                setTimeout(() => {
+                    notification.style.display = 'none';
+                }, timeout + 1000); // 1 secondo dopo che l'opacità è 0
+            })
+            .catch(error => {
+                console.error('Errore nella richiesta:', error);
+            })
+            .finally(() => {
+                console.log("Richiesta elaborata");
+            });
+        });
+    </script>
+</body>
+</html>
