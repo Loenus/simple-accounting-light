@@ -14,8 +14,7 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 let isUploadInProgress = false; // Variabile per indicare se un upload è in corso
-const filePathTemplate = 'Template2.xlsx';
-
+const FILEPATHTEMPLATE = process.env.FILEPATHTEMPLATE;
 
 // Configurazione per memorizzare i file in memoria
 const storage = multer.memoryStorage();
@@ -70,7 +69,7 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         await workbook2.xlsx.load(req.file.buffer);
         const worksheet2 = workbook2.getWorksheet(1);
 
-        await workbook.xlsx.readFile(filePathTemplate);
+        await workbook.xlsx.readFile(FILEPATHTEMPLATE);
         const worksheet = workbook.getWorksheet(1);
 
         // Mappare i dati e aggiungerli
@@ -93,12 +92,12 @@ app.post('/upload', upload.single('file'), async (req, res) => {
         });
 
         // Scrivi le modifiche
-        await workbook.xlsx.writeFile(filePathTemplate);
+        await workbook.xlsx.writeFile(FILEPATHTEMPLATE);
         console.log('File output aggiornato con successo!');
 
         res.json({
             type: 'success',
-            text: `File elaborato con successo: ${req.file.filename}`
+            text: `File elaborato con successo: ${req.file.originalname}`
         });
     } catch (error) {
         console.error('Errore durante l’elaborazione:', error);

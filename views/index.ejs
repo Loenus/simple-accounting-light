@@ -56,14 +56,14 @@
                 notificationContainer.appendChild(notification);
 
                 // Nascondi gradualmente la notifica dopo 10 secondi
-                setTimeout(() => {
-                    notification.style.opacity = '0'; // Inizia il fade-out
-                }, timeout); // Dopo 10 secondi
+                //setTimeout(() => {
+                //    notification.style.opacity = '0'; // Inizia il fade-out
+                //}, timeout); // Dopo 10 secondi
 
                 // Dopo il fade-out, nascondi completamente la notifica
                 setTimeout(() => {
                     notification.style.display = 'none';
-                }, timeout + 1000); // 1 secondo dopo che l'opacità è 0
+                }, timeout + 3000); // 1 secondo dopo che l'opacità è 0
             })
             .catch(error => {
                 console.error('Errore nella richiesta:', error);

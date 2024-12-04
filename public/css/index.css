@@ -128,7 +128,7 @@ input[type="file"] {
     display: none;
     opacity: 1; /* Imposta l'opacità iniziale a 1 (completamente visibile) */
     /*transition: opacity 1s ease-out; /* Aggiungi transizione di 1 secondo */
-    animation: slideIn 0.5s forwards, slideOut 3s forwards 7.5s; /* Animation for in and out */
+    animation: slideIn 0.5s forwards, slideOut 3s forwards 5s; /* Animation for in and out */
 }
 .notification.success {
     background-color: #d4edda;
