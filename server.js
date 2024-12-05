@@ -6,6 +6,7 @@ const logger = require('./config/logger');
 const requestLogger = require('./middleware/logging');
 const indexRouter = require('./routes/index');
 const uploadRouter = require('./routes/upload');
+const dailyTask = require('./jobs/dailyTask');
 const errorHandlers = require('./middleware/errorHandlers');
 
 const PORT = process.env.PORT || 3000;
@@ -19,6 +20,7 @@ app.set('views', path.join(__dirname, 'views'));
 // Middleware di logging (deve stare all'inizio)
 app.use(requestLogger);
 
+dailyTask();
 app.use('/', indexRouter);
 app.use('/api', uploadRouter);
 
@@ -32,5 +34,5 @@ app.use(errorHandlers.genericErrorHandler); // Gestione errori generici
 app.use(errorHandlers.notFoundHandler); // Gestione errori 404
 
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+    logger.info(`Server is running on http://localhost:${PORT}`);
 });

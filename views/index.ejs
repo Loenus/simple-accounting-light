@@ -43,7 +43,12 @@
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json()) // Risposta del server come JSON
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('file').value = '';
+                }
+                return response.json() // Risposta del server come JSON
+            })
             .then(data => {
                 // Mostra la notifica (successo o errore)
                 const notificationContainer = document.getElementById('notification-container');
@@ -64,8 +69,6 @@
                 setTimeout(() => {
                     notification.style.display = 'none';
                 }, timeout + 3000); // 1 secondo dopo che l'opacità è 0
-                
-                //TODO: rimuove il file selezionato dal campo "carica il file"
             })
             .catch(error => {
                 console.error('Errore nella richiesta:', error);

@@ -28,7 +28,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
                 text: 'Nessun file csv/xls/xlsx caricato.'
             });
         }
-        console.log(`File caricato in memoria: ${req.file.originalname}`)
+        logger.info(`File caricato in memoria per lettura: ${req.file.originalname}`)
         const workbook2 = new Excel.Workbook();
         await workbook2.xlsx.load(req.file.buffer);
         const worksheet2 = workbook2.getWorksheet(1);
@@ -57,7 +57,7 @@ router.post('/upload', upload.single('file'), async (req, res) => {
 
         // Scrivi le modifiche
         await workbook.xlsx.writeFile(FILEPATHTEMPLATE);
-        console.log('File output aggiornato con successo!');
+        logger.info('File output aggiornato con successo!');
 
         res.json({
             type: 'success',
