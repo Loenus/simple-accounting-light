@@ -39,7 +39,7 @@
             const formData = new FormData(this);
             
             // Esegui una richiesta AJAX
-            fetch('/upload', {
+            fetch('/api/upload', {
                 method: 'POST',
                 body: formData
             })
@@ -64,6 +64,8 @@
                 setTimeout(() => {
                     notification.style.display = 'none';
                 }, timeout + 3000); // 1 secondo dopo che l'opacità è 0
+                
+                //TODO: rimuove il file selezionato dal campo "carica il file"
             })
             .catch(error => {
                 console.error('Errore nella richiesta:', error);
