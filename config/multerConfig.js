@@ -8,7 +8,7 @@ const upload = multer({
     limits: { fileSize: 50 * 1024 * 1024 }, // Limite: 50 MB
     fileFilter: (req, file, cb) => {
         const allowedMimeTypes = [
-            //'text/csv',
+            'text/csv',
             'application/vnd.ms-excel', // .xls
             'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // .xlsx
         ];

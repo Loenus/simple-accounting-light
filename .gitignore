@@ -3,3 +3,5 @@ node_modules
 *.xlsx
 *.log
 *db-audit.json
+*.CSV
+*.txt
