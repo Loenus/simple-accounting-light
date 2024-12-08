@@ -86,56 +86,56 @@ router.post('/upload', upload.single('file'), async (req, res) => {
             const readableStream = Readable.from(req.file.buffer);
             const results = []; // Array to store the parsed data
 
-            let workbook = new Excel.Workbook();
-            await workbook.xlsx.readFile(FILE_PATH_TEMPLATE);
-            let worksheet = workbook.getWorksheet(1);
+            // Leggi il file Excel template
+            const workbook = xlsx.readFile(FILE_PATH_TEMPLATE);
+            let worksheet = workbook.Sheets[workbook.SheetNames[0]]; // Ottieni il primo foglio
 
-            // Verifica i limiti
-            /*if (worksheet.rowCount > 1048576 || worksheet.columnCount > 16384) {
-                console.log(worksheet.actualRowCount)
-                throw new Error('Limiti del foglio superati: impossibile aggiungere altre righe.');
-            }*/
+            // Verifica il numero di righe nel foglio
+            //const rowCount = xlsx.utils.sheet_to_json(worksheet, { header: 1 }).length;
 
-            cleanWorksheet(worksheet);
-            workbook = resetWorksheet(worksheet);
-            worksheet = workbook.getWorksheet(1);
+            // Funzione per rimuovere le righe vuote (puoi personalizzarla)
+            //function cleanWorksheet(worksheet) {
+            //    const rows = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
+            //    const cleanRows = rows.filter(row => row.some(cell => cell !== null && cell !== ''));
+            //    const newWorksheet = xlsx.utils.aoa_to_sheet(cleanRows); // Rebuild worksheet without empty rows
+            //    return newWorksheet;
+            //}
 
-            
+            //worksheet = cleanWorksheet(worksheet); // Pulisce il worksheet
 
-            // Read and parse the CSV file
+            // Leggi e parse il CSV
             readableStream
                 .pipe(csvParser())
                 .on('data', (row) => {
-                    const normalizedRow = normalizeKeys(row);
+                    const normalizedRow = normalizeKeys(row); // Assumendo che normalizeKeys sia definito
                     results.push(normalizedRow);
                 })
-                .on('end', async () => {
+                .on('end', () => {
+                    // Aggiungi le righe dal CSV al foglio Excel
                     results.forEach((row, index) => {
-                        //console.log(`Row ${index}:` + row);
-                        const import_transaction = row['Netto'] || '';
-                        const currency = row['Valuta'] || '';
-                        const date = row['Data'] || '';
-                        const counterparty = row['Nome'] || '';
-                        const description = row['Descrizione'] || '';
-                        const newRow = worksheet.addRow([
+                        const newRow = [
                             null,
-                            import_transaction,
-                            currency,
-                            date,
+                            row['Netto'] || '',
+                            row['Valuta'] || '',
+                            row['Data'] || '',
                             'PAYPAL',
-                            counterparty,
-                            description
-                        ]);
-                        newRow.commit();
+                            row['Nome'] || '',
+                            row['Descrizione'] || ''
+                        ];
+                        xlsx.utils.sheet_add_aoa(worksheet, [newRow], { origin: -1 }); // Aggiungi alla fine del foglio
                     });
-                    await workbook.xlsx.writeFile(TEMP_FILE_PATH);
+
+                    // Scrivi il file Excel modificato in un file temporaneo
+                    xlsx.writeFile(workbook, TEMP_FILE_PATH);
+
+                    // Rinomina il file temporaneo al nome finale
                     fs.renameSync(TEMP_FILE_PATH, FILE_PATH_TEMPLATE);
-                    
+
                     logger.info('File output aggiornato con successo!');
                     res.json({
                         type: 'success',
                         text: `File elaborato con successo: ${req.file.originalname}`
-                    }); 
+                    });
                 })
                 .on('error', (err) => {
                     res.status(500).json({ error: 'Errore durante l’elaborazione del file', details: err.message });
