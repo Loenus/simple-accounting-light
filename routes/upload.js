@@ -1,7 +1,7 @@
 const express = require('express');
 const logger = require('../config/logger');
 const upload = require('../config/multerConfig'); // Configurazione di Multer
-const Excel = require('exceljs');
+const ExcelJS = require('exceljs');
 const csvParser = require('csv-parser');
 const { Readable } = require('stream');
 const fs = require('fs')
@@ -72,9 +72,10 @@ const normalizeKeys = (row) => {
     );
 };
 
+// TODO: impedire il caricamento di un file paypal come un file intesa e viceversa
 
-// TODO:
-// 2) INTESA & PAYPAL: non sovrascivere il file
+// TODO: questo fa upload nel file di brutta in cui ci sono tutte le transazioni.
+// poi daily task che trasporta esattamente queste transazioni, però in un excel formattato con un report (usando ExcelJS)
 
 
 const intesaInput = (req, res) => {
@@ -112,38 +113,10 @@ const intesaInput = (req, res) => {
             description
         ];
 
-        // Trova la prossima riga vuota nel foglio di destinazione
-        const range = xlsx.utils.decode_range(worksheet['!ref']);
-        const nextRowNum = range.e.r + 1; // Prossima riga disponibile
-        //const cellStart = xlsx.utils.encode_cell({ r: nextRowNum, c: 0 });
-        //const cellEnd = xlsx.utils.encode_cell({ r: nextRowNum, c: newRow.length - 1 });
-
-        // Aggiungi i dati
-        for (let col = 0; col < newRow.length; col++) {
-            const cellAddress = xlsx.utils.encode_cell({ r: nextRowNum, c: col });
-            const value = newRow[col] || '';
-
-            // Determina il tipo della cella
-            let cellType = 's'; // Default: stringa
-            if (col === 1 && value !== '') { // Colonna import_transaction
-                cellType = 'n'; // 'n' indica un numero
-                worksheet[cellAddress] = { v: value, t: cellType, z: '0.00' };
-                continue;
-            } else if (col === 3) { // Colonna data
-                // Converte il numero Excel in oggetto Date
-                const jsDate = excelDateToJSDate(value);
-                const normalizedDate = normalizeDate(jsDate); // Rimuove orario
-                cellType = 'd'; // 'd' indica una data
-                worksheet[cellAddress] = { v: normalizedDate, t: cellType, z: 'dd/mm/yyyy' };
-                continue;
-            }
-        
-            // Scrivi la cella
-            worksheet[cellAddress] = { v: value, t: cellType };
-        }
-        // Aggiorna il range del foglio
-        worksheet['!ref'] = xlsx.utils.encode_range(range.s, { r: nextRowNum, c: range.e.c });
+        writeNewRowOnTemplate(worksheet, newRow);
     });
+
+    updateTemplate(worksheet);
 
     // Salva il file di output
     xlsx.writeFile(workbook, FILE_PATH_TEMPLATE);
@@ -177,8 +150,8 @@ const paypalInput = (req, res) => {
             results.push(normalizedRow);
         })
         .on('end', () => {
-            // Aggiungi le righe dal CSV al foglio Excel
-            results.forEach((row, index) => {
+            // Aggiungi tutte le righe dal CSV al foglio Excel
+            results.forEach((row) => {
                 const date = row['Data'] ? parseDate(row['Data']) : null;
                 let formatted_netto = row['Netto'].replace(",", ".");
                 let floatValue = parseFloat(formatted_netto);
@@ -191,46 +164,76 @@ const paypalInput = (req, res) => {
                     row['Nome'] || '',
                     row['Descrizione'] || ''
                 ];
-                //xlsx.utils.sheet_add_aoa(worksheet, [newRow], { origin: -1 }); // Aggiungi alla fine del foglio
 
-                // Trova la prossima riga vuota nel foglio di destinazione
-                const range = xlsx.utils.decode_range(worksheet['!ref']);
-                const nextRowNum = range.e.r + 1; // Prossima riga disponibile
-                //const cellStart = xlsx.utils.encode_cell({ r: nextRowNum, c: 0 });
-                //const cellEnd = xlsx.utils.encode_cell({ r: nextRowNum, c: newRow.length - 1 });
-
-                // Aggiungi i dati
-                for (let col = 0; col < newRow.length; col++) {
-                    const cellAddress = xlsx.utils.encode_cell({ r: nextRowNum, c: col });
-                    const value = newRow[col] || '';
-        
-                    // Determina il tipo della cella
-                    let cellType = 's'; // Default: stringa
-                    if (col === 1 && value !== '') { // Colonna import_transaction
-                        cellType = 'n'; // 'n' indica un numero
-                        worksheet[cellAddress] = { v: value, t: cellType, z: '0.00' };
-                        continue;
-                    } else if (col === 3) { // Colonna data
-                        // Converte il numero Excel in oggetto Date
-                        const jsDate = excelDateToJSDate(value);
-                        const normalizedDate = normalizeDate(jsDate); // Rimuove orario
-                        cellType = 'd'; // 'd' indica una data
-                        worksheet[cellAddress] = { v: normalizedDate, t: cellType, z: 'dd/mm/yyyy' };
-                        continue;
-                    }
-                
-                    // Scrivi la cella
-                    worksheet[cellAddress] = { v: value, t: cellType };
-                }
-                // Aggiorna il range del foglio
-                worksheet['!ref'] = xlsx.utils.encode_range(range.s, { r: nextRowNum, c: range.e.c });
+                writeNewRowOnTemplate(worksheet, newRow);
             });
 
+            updateTemplate(worksheet);
+
+            // Salva il file aggiornato
             xlsx.writeFile(workbook, FILE_PATH_TEMPLATE);
         })
         .on('error', (err) => {
             res.status(500).json({ error: 'Errore durante l’elaborazione del file', details: err.message });
         });
+}
+
+
+
+const writeNewRowOnTemplate = (worksheet, newRow) => {
+    // Trova la prossima riga vuota nel foglio di destinazione
+    const range = xlsx.utils.decode_range(worksheet['!ref']);
+    const nextRowNum = range.e.r + 1;
+
+    // Aggiungi i dati alla riga
+    for (let col = 0; col < newRow.length; col++) {
+        const cellAddress = xlsx.utils.encode_cell({ r: nextRowNum, c: col });
+        const value = newRow[col] || '';
+
+        // Determina il tipo della cella
+        let cellType = 's'; // Default: stringa
+        if (col === 1 && value !== '') { // Colonna import_transaction
+            cellType = 'n'; // 'n' indica un numero
+            worksheet[cellAddress] = { v: value, t: cellType, z: '0.00' }; // Formattazione numerica
+            continue;
+        } else if (col === 3 && value !== '') { // Colonna data
+            // Converte la data in formato Excel
+            const jsDate = excelDateToJSDate(value);
+            const normalizedDate = normalizeDate(jsDate); // Rimuove orario
+            cellType = 'd'; // 'd' indica una data
+            worksheet[cellAddress] = { v: normalizedDate, t: cellType, z: 'dd/mm/yyyy' }; // Formattazione data
+            continue;
+        }
+
+        // Scrivi la cella
+        worksheet[cellAddress] = { v: value, t: cellType };
+    }
+
+    // Aggiorna il range del foglio
+    worksheet['!ref'] = xlsx.utils.encode_range(range.s, { r: nextRowNum, c: range.e.c });
+}
+
+const updateTemplate = (worksheet) => {
+    var rangee = xlsx.utils.decode_range(worksheet['!ref']);
+    var colNum = xlsx.utils.decode_col("B"); // Colonna numerica (es. B per il netto)
+    var colDate = xlsx.utils.decode_col("D"); // Colonna data (es. D per la data)
+    var fmtNumber = '0.00'; // Formattazione numerica
+    var fmtDate = 'dd/mm/yy'; // Formattazione data
+
+    // Applicare formattazione a tutte le celle della colonna numerica e della colonna data
+    for (var i = rangee.s.r + 1; i <= rangee.e.r; ++i) {
+        // Applicare formattazione alla colonna numerica
+        var refNum = xlsx.utils.encode_cell({ r: i, c: colNum });
+        if (worksheet[refNum] && worksheet[refNum].t === 'n') { // Se è un numero
+            worksheet[refNum].z = fmtNumber; // Applica formattazione numerica
+        }
+
+        // Applicare formattazione alla colonna data
+        var refDate = xlsx.utils.encode_cell({ r: i, c: colDate });
+        if (worksheet[refDate]) { // Se è una data
+            worksheet[refDate].z = fmtDate; // Applica formattazione data
+        }
+    }
 }
 
 // Funzione per convertire una stringa 'dd/mm/yyyy' in un oggetto Date
