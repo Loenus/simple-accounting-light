@@ -6,12 +6,64 @@ const csvParser = require('csv-parser');
 const { Readable } = require('stream');
 const fs = require('fs')
 const xlsx = require('xlsx');
+const copyTasks = require('../jobs/copyTransactions');
+const importCash = require('../jobs/importCashTransactions');
 
 let isUploadInProgress = false; // Variabile per indicare se un upload è in corso
 const FILE_PATH_TEMPLATE = process.env.FILE_PATH_TEMPLATE;
 const TEMP_FILE_PATH = process.env.TEMP_FILE_PATH;
 
 const router = express.Router();
+
+router.get('/import-cash', async (req, res) => {
+    if (isUploadInProgress) {
+        return res.status(429).json({
+            type: 'error',
+            text: 'Un altro upload è già in corso. Riprova più tardi.',
+        });
+    }
+    isUploadInProgress = true; // Blocca nuove richieste
+
+    try {
+        await importCash.performDailyTask();
+        return res.status(200).json({
+            type: 'success',
+            text: 'Excel di output aggiornato con Successo!',
+        });
+    } catch (error) {
+        return res.status(500).json({
+            type: 'error',
+            text: 'ERRORE durante l\'aggiornamento del file Excel di output',
+        });
+    } finally {
+        isUploadInProgress = false; // Consenti nuove richieste
+    }
+})
+
+router.get('/refresh', async (req, res) => {
+    if (isUploadInProgress) {
+        return res.status(429).json({
+            type: 'error',
+            text: 'Un altro upload è già in corso. Riprova più tardi.',
+        });
+    }
+    isUploadInProgress = true; // Blocca nuove richieste
+
+    try {
+        await copyTasks.copiaRigheConFormato(FILE_PATH_TEMPLATE, TEMP_FILE_PATH);
+        return res.status(200).json({
+            type: 'success',
+            text: 'Excel di output aggiornato con Successo!',
+        });
+    } catch (error) {
+        return res.status(500).json({
+            type: 'error',
+            text: 'ERRORE durante l\'aggiornamento del file Excel di output',
+        });
+    } finally {
+        isUploadInProgress = false; // Consenti nuove richieste
+    }
+})
 
 router.post('/upload', upload.single('file'), async (req, res) => {
     if (isUploadInProgress) {

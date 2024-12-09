@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/css/index.css">
 </head>
 <body>
-    <div class="container">
+     <div class="container">
         <h1 class="title">Importa File</h1>
 
         <div id="notification-container"></div>
@@ -26,10 +26,35 @@
             </div>
             <button type="submit">Importa</button>
         </form>
+
+        <button id="refreshButton" class="fab-button fab-left" title="Refresh">↻</button>
+        <button id="importCashButton" class="fab-button fab-right" title="Importa Cash">💰</button>
     </div>
 
     <script>
         const timeout = 5000;
+
+        // Funzione per mostrare notifiche
+        function showNotification(data) {
+            const notificationContainer = document.getElementById('notification-container');
+            const notification = document.createElement('div');
+            notification.className = `notification ${data.type}`;
+            notification.innerHTML = data.text;
+            notificationContainer.style.display = 'block';
+
+            notificationContainer.innerHTML = ''; // Pulisce la precedente notifica
+            notificationContainer.appendChild(notification);
+
+            // Nascondi gradualmente la notifica dopo il timeout
+            setTimeout(() => {
+                notification.style.opacity = '0'; // Inizia il fade-out
+            }, timeout);
+
+            // Nascondi completamente la notifica dopo il fade-out
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, timeout + 3000);
+        }
 
         // Intercetta l'invio del form
         document.getElementById('importForm').addEventListener('submit', function (e) {
@@ -38,7 +63,7 @@
             // Crea un FormData per inviare i dati del form
             const formData = new FormData(this);
             
-            // Esegui una richiesta AJAX
+            // Esegui una richiesta POST
             fetch('/api/upload', {
                 method: 'POST',
                 body: formData
@@ -47,39 +72,51 @@
                 if (response.ok) {
                     document.getElementById('file').value = '';
                 }
-                return response.json() // Risposta del server come JSON
+                return response.json(); // Risposta del server come JSON
             })
             .then(data => {
                 // Mostra la notifica (successo o errore)
-                const notificationContainer = document.getElementById('notification-container');
-                const notification = document.createElement('div');
-                notification.className = `notification ${data.type}`;
-                notification.innerHTML = data.text;
-                notificationContainer.style.display = 'block';
-
-                notificationContainer.innerHTML = ''; // Pulisce la precedente notifica
-                notificationContainer.appendChild(notification);
-
-                // Nascondi gradualmente la notifica dopo 10 secondi
-                //setTimeout(() => {
-                //    notification.style.opacity = '0'; // Inizia il fade-out
-                //}, timeout); // Dopo 10 secondi
-
-                // Dopo il fade-out, nascondi completamente la notifica
-                setTimeout(() => {
-                    notification.style.display = 'none';
-                }, timeout + 3000); // 1 secondo dopo che l'opacità è 0
+                showNotification(data);
             })
             .catch(error => {
                 console.error('Errore nella richiesta:', error);
             })
             .finally(() => {
-                //setTimeout(() => {
-                //  notificationContainer.style.display = 'none';  // Nascondi la notifica
-                //}, 2000);
-                console.log("Richiesta elaborata");
+                console.log("Richiesta POST elaborata");
             });
+        });
+
+        // Aggiungi il comportamento al pulsante Refresh
+        document.getElementById('refreshButton').addEventListener('click', function () {
+            // Esegui una richiesta GET
+            fetch('/api/refresh', { method: 'GET' })
+            .then(response => response.json())
+            .then(data => {
+                // Mostra la notifica (successo o errore)
+                showNotification(data);
+            })
+            .catch(error => {
+                console.error('Errore nella richiesta GET:', error);
+            })
+            .finally(() => {
+                console.log("Richiesta GET elaborata");
+            });
+        });
+
+        document.getElementById('importCashButton').addEventListener('click', function () {
+            // Esegui una richiesta GET per importare i cash
+            fetch('/api/import-cash', { method: 'GET' })
+                .then(response => response.json())
+                .then(data => {
+                    // Mostra la notifica (successo o errore)
+                    showNotification(data);
+                })
+                .catch(error => {
+                    console.error('Errore nella richiesta Import Cash:', error);
+                })
+                .finally(() => {
+                    console.log("Richiesta Import Cash elaborata");
+                });
         });
     </script>
 </body>
-</html>

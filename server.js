@@ -6,7 +6,8 @@ const logger = require('./config/logger');
 const requestLogger = require('./middleware/logging');
 const indexRouter = require('./routes/index');
 const uploadRouter = require('./routes/upload');
-const task = require('./jobs/dailyTask');
+const importCash = require('./jobs/importCashTransactions');
+const copyTasks = require('./jobs/copyTransactions');
 const errorHandlers = require('./middleware/errorHandlers');
 
 const PORT = process.env.PORT || 3000;
@@ -20,8 +21,8 @@ app.set('views', path.join(__dirname, 'views'));
 // Middleware di logging (deve stare all'inizio)
 app.use(requestLogger);
 
-//dailyTask();
-//task.performDailyTask();
+importCash.dailyTask();
+copyTasks.copyTask();
 app.use('/', indexRouter);
 app.use('/api', uploadRouter);
 
