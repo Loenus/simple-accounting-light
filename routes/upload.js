@@ -73,6 +73,10 @@ const normalizeKeys = (row) => {
 };
 
 
+// TODO:
+// 2) INTESA & PAYPAL: non sovrascivere il file
+
+
 const intesaInput = (req, res) => {
     logger.info(`File caricato in memoria per lettura: ${req.file.originalname}`);
     
@@ -81,8 +85,7 @@ const intesaInput = (req, res) => {
     const worksheet2 = workbook2.Sheets[workbook2.SheetNames[0]]; // Prendi il primo foglio
 
     // Carica il file template
-    const templatePath = FILE_PATH_TEMPLATE;
-    const workbook = xlsx.readFile(templatePath);
+    const workbook = xlsx.readFile(FILE_PATH_TEMPLATE);
     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
 
     // Leggi i dati dal primo file e scrivi al template
@@ -124,6 +127,8 @@ const intesaInput = (req, res) => {
             let cellType = 's'; // Default: stringa
             if (col === 1 && value !== '') { // Colonna import_transaction
                 cellType = 'n'; // 'n' indica un numero
+                worksheet[cellAddress] = { v: value, t: cellType, z: '0.00' };
+                continue;
             } else if (col === 3) { // Colonna data
                 // Converte il numero Excel in oggetto Date
                 const jsDate = excelDateToJSDate(value);
@@ -175,17 +180,18 @@ const paypalInput = (req, res) => {
             // Aggiungi le righe dal CSV al foglio Excel
             results.forEach((row, index) => {
                 const date = row['Data'] ? parseDate(row['Data']) : null;
-                console.log(date);
+                let formatted_netto = row['Netto'].replace(",", ".");
+                let floatValue = parseFloat(formatted_netto);
                 const newRow = [
                     null,
-                    row['Netto'] || '',
+                    floatValue || '',
                     row['Valuta'] || '',
                     date || '',
                     'PAYPAL',
                     row['Nome'] || '',
                     row['Descrizione'] || ''
                 ];
-                xlsx.utils.sheet_add_aoa(worksheet, [newRow], { origin: -1 }); // Aggiungi alla fine del foglio
+                //xlsx.utils.sheet_add_aoa(worksheet, [newRow], { origin: -1 }); // Aggiungi alla fine del foglio
 
                 // Trova la prossima riga vuota nel foglio di destinazione
                 const range = xlsx.utils.decode_range(worksheet['!ref']);
@@ -197,11 +203,13 @@ const paypalInput = (req, res) => {
                 for (let col = 0; col < newRow.length; col++) {
                     const cellAddress = xlsx.utils.encode_cell({ r: nextRowNum, c: col });
                     const value = newRow[col] || '';
-
+        
                     // Determina il tipo della cella
                     let cellType = 's'; // Default: stringa
                     if (col === 1 && value !== '') { // Colonna import_transaction
                         cellType = 'n'; // 'n' indica un numero
+                        worksheet[cellAddress] = { v: value, t: cellType, z: '0.00' };
+                        continue;
                     } else if (col === 3) { // Colonna data
                         // Converte il numero Excel in oggetto Date
                         const jsDate = excelDateToJSDate(value);
@@ -218,13 +226,6 @@ const paypalInput = (req, res) => {
                 worksheet['!ref'] = xlsx.utils.encode_range(range.s, { r: nextRowNum, c: range.e.c });
             });
 
-
-            // Scrivi il file Excel modificato in un file temporaneo
-            //xlsx.writeFile(workbook, TEMP_FILE_PATH);
-
-            // Rinomina il file temporaneo al nome finale
-            //fs.renameSync(TEMP_FILE_PATH, FILE_PATH_TEMPLATE);
-
             xlsx.writeFile(workbook, FILE_PATH_TEMPLATE);
         })
         .on('error', (err) => {
@@ -235,7 +236,9 @@ const paypalInput = (req, res) => {
 // Funzione per convertire una stringa 'dd/mm/yyyy' in un oggetto Date
 function parseDate(dateStr) {
     const [day, month, year] = dateStr.split('/').map(Number);
-    return new Date(year, month - 1, day);  // I mesi in JavaScript sono indicizzati a zero
+    const date = new Date(year, month - 1, day);
+    let numeroSeriale = 25569.0 + ((date.getTime() - (date.getTimezoneOffset() * 60 * 1000)) / (1000 * 60 * 60 * 24))
+    return numeroSeriale;
 }
 
 
